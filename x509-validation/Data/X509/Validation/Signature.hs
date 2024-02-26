@@ -77,9 +77,7 @@ verifySignature (SignatureALG hashALG PubKeyALG_RSAPSS) pubkey cdata signature =
                else SignatureFailed SignatureInvalid
   where
     verifyF (PubKeyRSA key)
-      | hashALG == HashSHA256 = Just $
-          let params = (PSS.defaultPSSParams SHA256) { PSS.pssSaltLength = 20 }
-           in PSS.verify params key
+      | hashALG == HashSHA256 = Just $ PSS.verify (PSS.defaultPSSParams SHA256) key
       | hashALG == HashSHA384 = Just $ PSS.verify (PSS.defaultPSSParams SHA384) key
       | hashALG == HashSHA512 = Just $ PSS.verify (PSS.defaultPSSParams SHA512) key
       | hashALG == HashSHA224 = Just $ PSS.verify (PSS.defaultPSSParams SHA224) key
