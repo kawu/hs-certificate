@@ -108,13 +108,21 @@ instance ASN1Object SignatureALG where
             signatureAlg -> Right (signatureAlg, xs)
     fromASN1 (Start Sequence:OID oid:End Sequence:xs) =
         Right (oidSig oid, xs)
-    fromASN1 (Start Sequence:OID [1,2,840,113549,1,1,10]:Start Sequence:Start _:Start Sequence:OID hash1:End Sequence:End _:Start _:Start Sequence:OID [1,2,840,113549,1,1,8]:Start Sequence:OID _hash2:End Sequence:End Sequence:End _:Start _: IntVal _iv: End _: End Sequence : End Sequence:xs) =
-        Right (oidSig hash1, xs)
-    fromASN1 (Start Sequence:OID [1,2,840,113549,1,1,10]:Start Sequence:Start _:Start Sequence:OID hash1:Null:End Sequence:End _:Start _:Start Sequence:OID [1,2,840,113549,1,1,8]:Start Sequence:OID _hash2:Null:End Sequence:End Sequence:End _:Start _: IntVal _iv: End _: End Sequence : End Sequence:xs) =
-        Right (oidSig hash1, xs)
+    fromASN1 (Start Sequence:OID [1,2,840,113549,1,1,10]:Start Sequence:Start _:Start Sequence:OID hash1:End Sequence:End _:Start _:Start Sequence:OID [1,2,840,113549,1,1,8]:Start Sequence:OID _hash2:End Sequence:End Sequence:End _:xs) =
+        handleRsapssSaltFromASN1 hash1 xs
+    fromASN1 (Start Sequence:OID [1,2,840,113549,1,1,10]:Start Sequence:Start _:Start Sequence:OID hash1:Null:End Sequence:End _:Start _:Start Sequence:OID [1,2,840,113549,1,1,8]:Start Sequence:OID _hash2:Null:End Sequence:End Sequence:End _:xs) =
+        handleRsapssSaltFromASN1 hash1 xs
     fromASN1 _ =
         Left "fromASN1: X509.SignatureALG: unknown format"
     toASN1 (SignatureALG_Unknown oid) = \xs -> Start Sequence:OID oid:Null:End Sequence:xs
     toASN1 signatureAlg@(SignatureALG hashAlg PubKeyALG_RSAPSS) = \xs -> Start Sequence:OID [1,2,840,113549,1,1,10]:Start Sequence:Start (Container Context 0):Start Sequence:OID (sigOID signatureAlg):End Sequence:End (Container Context 0):Start (Container Context 1): Start Sequence:OID [1,2,840,113549,1,1,8]:Start Sequence:OID (sigOID signatureAlg):End Sequence:End Sequence:End (Container Context 1):Start (Container Context 2):IntVal (saltLen hashAlg):End (Container Context 2):End Sequence:End Sequence:xs
     toASN1 signatureAlg@(SignatureALG_IntrinsicHash _) = \xs -> Start Sequence:OID (sigOID signatureAlg):End Sequence:xs
     toASN1 signatureAlg = \xs -> Start Sequence:OID (sigOID signatureAlg):Null:End Sequence:xs
+
+handleRsapssSaltFromASN1 :: OID -> [ASN1] -> Either String (SignatureALG, [ASN1])
+handleRsapssSaltFromASN1 hashOid xs = case xs of
+    Start _: IntVal _iv: End _: End Sequence : End Sequence:xs' ->
+        Right (oidSig hashOid, xs')
+    End Sequence:End Sequence:xs' ->
+        Right (oidSig hashOid, xs')
+    _ -> Left "fromASN1: X509.SignatureALG: unknown RSAPSS parameters format"
