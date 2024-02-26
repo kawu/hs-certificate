@@ -88,7 +88,7 @@ data PubKey =
 -- End Sequence
 instance ASN1Object PubKey where
     fromASN1 (Start Sequence:Start Sequence:OID pkalg:xs)
-        | pkalg == getObjectID PubKeyALG_RSA =
+        | pkalg == getObjectID PubKeyALG_RSA || pkalg == getObjectID PubKeyALG_RSAPSS =
             case removeNull xs of
                 End Sequence:BitString bits:End Sequence:xs2 -> decodeASN1Err "RSA" bits xs2 (toPubKeyRSA . rsaPubFromASN1)
                 _ -> Left ("fromASN1: X509.PubKey: unknown RSA format: " ++ show xs)
